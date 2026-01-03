@@ -9,7 +9,6 @@ use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
 use Tbessenreither\PhpMultithread\Bundle\DependencyInjection\Compiler\CompilerPass;
 use Tbessenreither\PhpMultithread\DataCollector\PhpMultithreadDataCollector;
-use Tbessenreither\PhpMultithread\Service\MultithreadService;
 
 
 class PhpMultithreadBundle extends Bundle
@@ -26,7 +25,7 @@ class PhpMultithreadBundle extends Bundle
 
 	private function processMultithreadServiceCollector(ContainerBuilder $container): void
 	{
-		$definition = new Definition(MultithreadService::class);
+		$definition = new Definition(PhpMultithreadDataCollector::class);
 		$definition->setPublic(true);
 		$definition->addTag('data_collector', [
 			'id' => PhpMultithreadDataCollector::NAME,
