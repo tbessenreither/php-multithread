@@ -17,8 +17,6 @@ class PhpMultithreadDataCollector extends DataCollector implements DataCollector
     public const NAME = 'tbessenreither.php_multithread_service_collector';
     public const TEMPLATE = '@TbessenreitherPhpMultithread/Profiler/php_multithread_service_collector.html.twig';
 
-    private bool $statisticsCalculated = false;
-
     public function __construct(
         private readonly string $appEnv,
     ) {
@@ -44,8 +42,6 @@ class PhpMultithreadDataCollector extends DataCollector implements DataCollector
      */
     public function getRuns(): array
     {
-        $this->calculateAllStatistics();
-
         return $this->data['runs'] ?? [];
     }
 
@@ -61,19 +57,6 @@ class PhpMultithreadDataCollector extends DataCollector implements DataCollector
     public function isCollecting(): bool
     {
         return $this->appEnv === 'dev';
-    }
-
-    private function calculateAllStatistics(): void
-    {
-        if ($this->statisticsCalculated) {
-            return;
-        }
-
-        foreach ($this->data['runs'] as $run) {
-            $run->calculateStatistics();
-        }
-
-        $this->statisticsCalculated = true;
     }
 
 }

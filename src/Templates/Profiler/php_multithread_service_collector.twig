@@ -1,0 +1,84 @@
+{% extends '@WebProfiler/Profiler/layout.html.twig' %}
+
+
+{% block stylesheets %}
+	{{ parent() }}
+	<style>
+		tr.log-status-warning > td:first-child,
+		tr.log-status-error > td:first-child,
+		tr.log-status-silenced > td:first-child {
+			position: relative;
+		}
+		tr.log-status-warning > td:first-child:before,
+		tr.log-status-error > td:first-child:before,
+		tr.log-status-silenced > td:first-child:before {
+			background: transparent;
+			border-radius: 0;
+			content: '';
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 4px;
+			height: 100%;
+		}
+		tr.log-status-warning > td:first-child:before {
+			background: var(--yellow-400);
+		}
+		tr.log-status-error > td:first-child:before {
+			background: var(--red-400);
+		}
+		tr.log-status-silenced > td:first-child:before {
+			background: #a78bfa;
+		}
+	</style>
+{% endblock %}
+
+{% block menu %}
+	<span class="label {{collector.active ? '' : 'disabled'}}">
+		<span class="icon">
+			{{ source('@WebProfiler/Icon/workflow.svg') }}
+		</span>
+		<strong>PHP Multithread</strong>
+	</span>
+{% endblock %}
+
+{% block panel %}
+
+<h2>Metrics</h2>
+
+<h3>Executed Commands</h3>
+
+{% if collector.runs is empty %}
+	<div class="empty">
+		<p>No runs recorded.</p>
+	</div>
+{% endif %}
+	<table style="display: table;">
+		<thead>
+			<tr>
+				<th>Runner</th>
+				<th>Class</th>
+				<th>Method</th>
+				<th>duration</th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for entry in collector.runs %}
+				<tr class="" style="display: table-row;">
+					<td class="font-normal">
+						{{ entry.runner }}
+					</td>
+					<td class="font-normal">
+						{{ entry.class }}
+					</td>
+					<td class="font-normal">
+						{{ entry.method }}
+					</td>
+					<td class="font-normal">
+						{{ entry.response.duration|number_format(3) }}&nbsp;s
+					</td>
+				</tr>
+			</td>
+		</tbody>
+	</tr>
+</div>{% endfor %}</tbody></table>{% endblock %}
