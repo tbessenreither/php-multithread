@@ -1,0 +1,79 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tbessenreither\PhpMultithread\DataCollector;
+
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\DataCollector\DataCollector;
+use Symfony\Component\HttpKernel\DataCollector\DataCollectorInterface;
+use Tbessenreither\PhpMultithread\Dto\ThreadDto;
+use Throwable;
+
+
+class PhpMultithreadDataCollector extends DataCollector implements DataCollectorInterface
+{
+    public const NAME = 'tbessenreither.php_multithread_service_collector';
+    public const TEMPLATE = '@TbessenreitherPhpMultithread/Profiler/php_multithread_service_collector.html.twig';
+
+    private bool $statisticsCalculated = false;
+
+    public function __construct(
+        private readonly string $appEnv,
+    ) {
+        $this->data['runs'] = [];
+    }
+
+    public function getName(): string
+    {
+        return self::NAME;
+    }
+
+    public function addRun(ThreadDto $threadDto): void
+    {
+        if (!$this->isCollecting()) {
+            return;
+        }
+
+        $this->data['runs'][] = $threadDto;
+    }
+
+    /**
+     * @return ThreadDto[]
+     */
+    public function getRuns(): array
+    {
+        $this->calculateAllStatistics();
+
+        return $this->data['runs'] ?? [];
+    }
+
+    public function isActive(): bool
+    {
+        return !empty($this->getRuns());
+    }
+
+    public function collect(Request $request, Response $response, ?Throwable $exception = null): void
+    {
+    }
+
+    public function isCollecting(): bool
+    {
+        return $this->appEnv === 'dev';
+    }
+
+    private function calculateAllStatistics(): void
+    {
+        if ($this->statisticsCalculated) {
+            return;
+        }
+
+        foreach ($this->data['runs'] as $run) {
+            $run->calculateStatistics();
+        }
+
+        $this->statisticsCalculated = true;
+    }
+
+}

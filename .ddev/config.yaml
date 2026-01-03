@@ -1,0 +1,19 @@
+name: php-multithread
+type: php
+docroot: ""
+php_version: "8.4"
+webserver_type: nginx-fpm
+xdebug_enabled: false
+additional_hostnames: []
+additional_fqdns: []
+use_dns_when_possible: true
+composer_version: "2"
+web_environment: []
+nodejs_version: ""
+
+hooks:
+  post-start:
+    - exec: composer install
+
+# Omit containers not needed for a bundle
+omit_containers: [db]
