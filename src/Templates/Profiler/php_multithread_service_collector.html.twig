@@ -4,11 +4,13 @@
 {% block stylesheets %}
 	{{ parent() }}
 	<style>
+		tr.log-status-success > td:first-child,
 		tr.log-status-warning > td:first-child,
 		tr.log-status-error > td:first-child,
 		tr.log-status-silenced > td:first-child {
 			position: relative;
 		}
+		tr.log-status-success > td:first-child:before,
 		tr.log-status-warning > td:first-child:before,
 		tr.log-status-error > td:first-child:before,
 		tr.log-status-silenced > td:first-child:before {
@@ -20,6 +22,9 @@
 			left: 0;
 			width: 4px;
 			height: 100%;
+		}
+		tr.log-status-success > td:first-child:before {
+			background: var(--badge-success-color);
 		}
 		tr.log-status-warning > td:first-child:before {
 			background: var(--yellow-400);
@@ -79,8 +84,16 @@
 {% endif %}
 
 {% for batchNumber, runs in collector.getRunsGroupedByBatchNumber() %}
-    <h3>Batch {{ batchNumber }}</h3>
-    <div>Runner: {{ runs[0].runnerName }} ({{ runs|length }} threads)</div>
+    <nav>
+        <ul>
+            <li><a href="#batch-{{ batchNumber }}">Batch {{ batchNumber }} ({{ runs|length }} threads / {{ collector.countBatchErrors(runs) }} errors)</a></li>
+        </ul>
+    </nav>
+{% endfor %}
+
+{% for batchNumber, runs in collector.getRunsGroupedByBatchNumber() %}
+    <h3 id="batch-{{ batchNumber }}">Batch {{ batchNumber }}</h3>
+    <div>Runner: {{ runs[0].runnerName }} ({{ runs|length }} threads / {{ collector.countBatchErrors(runs) }} errors)</div>
 	<table style="display: table;">
 		<thead>
 			<tr>
@@ -92,7 +105,7 @@
 		</thead>
 		<tbody>
 			{% for entry in runs %}
-				<tr class="" style="display: table-row;">
+				<tr class="{{ entry.response.hasError ? 'log-status-error' : 'log-status-success' }}" style="display: table-row;">
 					<td class="font-normal">
 						<span title="{{ entry.class }}">{{ entry.className }}</span>
 					</td>

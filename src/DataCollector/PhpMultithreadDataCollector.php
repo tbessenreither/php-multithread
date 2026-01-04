@@ -95,4 +95,19 @@ class PhpMultithreadDataCollector extends DataCollector implements DataCollector
         return $this->data['issues'] ?? [];
     }
 
+    /**
+     * @param ThreadDto[] $batch
+     */
+    public function countBatchErrors(array $batch): int
+    {
+        $count = 0;
+        foreach ($batch as $run) {
+            if ($run->hasResponse() && $run->getResponse()?->hasError()) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
 }

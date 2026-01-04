@@ -48,6 +48,7 @@ class MultithreadService
         $runnerResponses = $runner->run(
             threadDtos: $threadDtos,
         );
+        $this->checkResponseDtos($runnerResponses);
         $this->stopwatch->stop("Run Threads");
 
         return $runnerResponses;
@@ -87,6 +88,28 @@ class MultithreadService
                 );
                 unset($threadDtos[$key]);
             }
+        }
+    }
+
+    /**
+     * @param ResponseDto[] $responseDtos
+     */
+    private function checkResponseDtos(array &$responseDtos): void
+    {
+        $responsesWithErrors = [];
+        foreach ($responseDtos as $responseDto) {
+            if ($responseDto->hasError()) {
+                $responsesWithErrors[] = $responseDto->getUuid();
+            }
+        }
+        if (!empty($responsesWithErrors)) {
+            $this->phpMultithreadDataCollector->raiseIssue(
+                message: count($responsesWithErrors) . " threads of batch #{$this->batchNumber} returned errors.",
+                context: [
+                    'batch' => $this->batchNumber,
+                    'uuids' => $responsesWithErrors,
+                ],
+            );
         }
     }
 
