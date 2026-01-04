@@ -145,9 +145,6 @@ When running your command with the `--profile` option, you’ll see a dedicated 
 ## Requirements
 
 - PHP ^8.4
-- symfony/config ^7.4
-- symfony/dependency-injection ^7.4
-- symfony/http-kernel ^7.4
 - symfony/process ^8.0
 - symfony/uid ^8.0
 
