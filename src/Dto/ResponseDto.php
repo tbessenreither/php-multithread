@@ -13,6 +13,8 @@ class ResponseDto
     private ?float $startTime = null;
     private ?float $finishTime = null;
 
+    private ResourceUsageDto $resourceUsageDto;
+
     public function __construct(
         public ?string $uuid = null,
         private mixed $result = null,
@@ -20,6 +22,7 @@ class ResponseDto
         private ?string $output = null,
     ) {
         $this->startTime = microtime(true);
+        $this->resourceUsageDto = new ResourceUsageDto();
     }
 
     public function setUuid(string $uuid): void
@@ -83,6 +86,11 @@ class ResponseDto
             return null;
         }
         return $this->finishTime - $this->startTime;
+    }
+
+    public function getResourceUsageDto(): ResourceUsageDto
+    {
+        return $this->resourceUsageDto;
     }
 
 }

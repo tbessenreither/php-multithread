@@ -3,6 +3,7 @@
 namespace Tbessenreither\PhpMultithread\Service\Runners;
 
 use RuntimeException;
+use Tbessenreither\PhpMultithread\DataCollector\PhpMultithreadDataCollector;
 use Tbessenreither\PhpMultithread\Dto\ResponseDto;
 use Tbessenreither\PhpMultithread\Dto\ThreadDto;
 use Tbessenreither\PhpMultithread\Interface\ThreadRunnerInterface;
@@ -77,6 +78,8 @@ class PcntlRunner implements ThreadRunnerInterface
                 // Child
                 fclose($socketsPair[1]); // Close parent's socket
 
+                $this->fixPcntlIssues();
+
                 $responseDto = new ResponseDto();
                 $responseDto->setUuid($threadDto->getUuid());
 
@@ -109,6 +112,7 @@ class PcntlRunner implements ThreadRunnerInterface
                 $timeout = $threadDto->getTimeout();
                 $status = null;
                 $socket = $sockets[$uuid];
+                $resourceUsage = [];
 
                 if ($timeout !== null) {
                     $this->waitForThreadWithTimeout(
@@ -116,15 +120,17 @@ class PcntlRunner implements ThreadRunnerInterface
                         pid: $pid,
                         timeout: $timeout,
                         startingTime: $startingTime,
+                        resourceUsage: $resourceUsage,
                     );
                 } else {
-                    pcntl_waitpid($pid, $status);
+                    pcntl_waitpid($pid, $status, 0, $resourceUsage);
                 }
 
-                $content = stream_get_contents($socket);
-                if ($content) {
-                    $responseDtos[$uuid] = ResponseDto::fromSerialized($content);
+                $responseDtos[$uuid] = $this->getDataFromSocket($socket);
+                if (isset($resourceUsage['ru_maxrss'])) {
+                    $responseDtos[$uuid]->getResourceUsageDto()->setMaxMemory($resourceUsage['ru_maxrss']);
                 }
+
             } catch (Throwable $e) {
                 $responseDtos[$uuid] = new ResponseDto(
                     uuid: $uuid,
@@ -136,10 +142,20 @@ class PcntlRunner implements ThreadRunnerInterface
         }
     }
 
-    private function waitForThreadWithTimeout(string $uuid, int $pid, int $timeout, int $startingTime): void
+    private function getDataFromSocket($socket): ResponseDto
+    {
+        $content = stream_get_contents($socket);
+        if ($content) {
+            return ResponseDto::fromSerialized($content);
+        }
+
+        throw new RuntimeException("No data received from socket.");
+    }
+
+    private function waitForThreadWithTimeout(string $uuid, int $pid, int $timeout, int $startingTime, array &$resourceUsage): void
     {
         while (true) {
-            $res = pcntl_waitpid($pid, $status, WNOHANG);
+            $res = pcntl_waitpid($pid, $status, WNOHANG, $resourceUsage);
             if ($res == -1 || $res > 0) {
                 break;
             }
@@ -148,9 +164,9 @@ class PcntlRunner implements ThreadRunnerInterface
                 // timeout reached: try graceful termination, then force
                 @posix_kill($pid, SIGTERM);
                 usleep(200000); // 200ms grace
-                if (pcntl_waitpid($pid, $status, WNOHANG) == 0) {
+                if (pcntl_waitpid($pid, $status, WNOHANG, $resourceUsage) == 0) {
                     @posix_kill($pid, SIGKILL);
-                    pcntl_waitpid($pid, $status);
+                    pcntl_waitpid($pid, $status, 0, $resourceUsage);
                 }
 
                 throw new RuntimeException("Thread {$uuid} timed out and terminated after {$timeout} seconds.");
@@ -172,6 +188,19 @@ class PcntlRunner implements ThreadRunnerInterface
             if (isset($responseDtos[$uuid])) {
                 $threadDto->setResponse($responseDtos[$uuid]);
             }
+        }
+    }
+
+    private function fixPcntlIssues(): void
+    {
+        $this->fixPcntlRandIssues();
+    }
+
+    private function fixPcntlRandIssues(): void
+    {
+        for ($i = 0; $i < random_int(0, 1024); $i++) {
+            usleep(random_int(0, 10));
+            rand(random_int(0, 512), random_int(513, 1024));
         }
     }
 

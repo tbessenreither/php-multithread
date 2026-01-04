@@ -99,7 +99,7 @@
 			<tr>
 				<th>Class</th>
 				<th>Method</th>
-				<th>Duration</th>
+				<th>Metrics</th>
                 <th>Response</th>
 			</tr>
 		</thead>
@@ -113,7 +113,8 @@
 						{{ entry.method }}
 					</td>
 					<td class="font-normal">
-						{{ entry.response.duration|number_format(3) }}&nbsp;s
+						{{ entry.response.duration|number_format(3) }}&nbsp;s<br>
+                        <span title="{{ entry.response.resourceUsageDto.maxMemory }}">{{ entry.response.resourceUsageDto.maxMemoryHumanReadable }}</span>
 					</td>
                     <td class="font-normal">
                         <pre>{{ dump(entry.response)}}</pre>
