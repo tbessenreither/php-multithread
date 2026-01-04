@@ -114,7 +114,7 @@
 					</td>
 					<td class="font-normal">
 						{{ entry.response.duration|number_format(3) }}&nbsp;s<br>
-                        <span title="{{ entry.response.resourceUsageDto.maxMemory }}">{{ entry.response.resourceUsageDto.maxMemoryHumanReadable }}</span>
+                        <span title="{{ entry.response.resourceUsageDto.maxMemory }}">{{ entry.response.resourceUsageDto.maxMemoryHumanReadable|replace({' ': '&nbsp;'})|raw  }}</span>
 					</td>
                     <td class="font-normal">
                         <pre>{{ dump(entry.response)}}</pre>
