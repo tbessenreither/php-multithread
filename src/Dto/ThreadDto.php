@@ -23,6 +23,7 @@ class ThreadDto
         private string $class,
         private string $method,
         private array $parameters = [],
+        private ?int $timeout = null,
     ) {
         $this->uuid = UuidV7::v7()->toRfc4122();
 
@@ -124,6 +125,11 @@ class ThreadDto
     public function getBatchNumber(): int
     {
         return $this->batchNumber ?? 0;
+    }
+
+    public function getTimeout(): ?int
+    {
+        return $this->timeout;
     }
 
 }

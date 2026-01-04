@@ -2,6 +2,7 @@
 
 namespace Tbessenreither\PhpMultithread\Service\Runners;
 
+use RuntimeException;
 use Tbessenreither\PhpMultithread\Dto\ResponseDto;
 use Tbessenreither\PhpMultithread\Dto\ThreadDto;
 use Tbessenreither\PhpMultithread\Interface\ThreadRunnerInterface;
@@ -26,8 +27,37 @@ class PcntlRunner implements ThreadRunnerInterface
         $sockets = [];
         $pids = [];
         $responseDtos = [];
+        $threadsDtoByUuid = [];
+        $startingTime = time();
 
+        $this->startThreads(
+            threadDtos: $threadDtos,
+            threadsDtoByUuid: $threadsDtoByUuid,
+            sockets: $sockets,
+            pids: $pids,
+        );
+
+        $this->waitForThreadsToFinish(
+            pids: $pids,
+            threadsDtoByUuid: $threadsDtoByUuid,
+            sockets: $sockets,
+            responseDtos: $responseDtos,
+            startingTime: $startingTime,
+        );
+
+        $this->updateThreadDtos(
+            threadDtos: $threadDtos,
+            responseDtos: $responseDtos,
+        );
+
+        return $responseDtos;
+    }
+
+    private function startThreads(array $threadDtos, array &$threadsDtoByUuid, array &$sockets, array &$pids): void
+    {
         foreach ($threadDtos as $threadDto) {
+            $threadsDtoByUuid[$threadDto->getUuid()] = $threadDto;
+
             $domain = (strtoupper(substr(PHP_OS, 0, 3)) == 'WIN' ? STREAM_PF_INET : STREAM_PF_UNIX);
             $socketsPair = stream_socket_pair($domain, STREAM_SOCK_STREAM, STREAM_IPPROTO_IP);
             if (!$socketsPair) {
@@ -69,21 +99,64 @@ class PcntlRunner implements ThreadRunnerInterface
                 exit(0);
             }
         }
+    }
 
+    private function waitForThreadsToFinish(array $pids, array &$threadsDtoByUuid, array &$sockets, array &$responseDtos, int $startingTime): void
+    {
         foreach ($pids as $uuid => $pid) {
-            pcntl_waitpid($pid, $status);
-            $socket = $sockets[$uuid];
-            $content = stream_get_contents($socket);
-            fclose($socket);
+            try {
+                $threadDto = $threadsDtoByUuid[$uuid];
+                $timeout = $threadDto->getTimeout();
+                $status = null;
+                $socket = $sockets[$uuid];
 
-            if ($content) {
-                $responseDtos[$uuid] = ResponseDto::fromSerialized($content);
+                if ($timeout !== null) {
+                    $this->waitForThreadWithTimeout(
+                        uuid: $uuid,
+                        pid: $pid,
+                        timeout: $timeout,
+                        startingTime: $startingTime,
+                    );
+                } else {
+                    pcntl_waitpid($pid, $status);
+                }
+
+                $content = stream_get_contents($socket);
+                if ($content) {
+                    $responseDtos[$uuid] = ResponseDto::fromSerialized($content);
+                }
+            } catch (Throwable $e) {
+                $responseDtos[$uuid] = new ResponseDto(
+                    uuid: $uuid,
+                    error: $e,
+                );
+            } finally {
+                fclose($socket);
             }
         }
+    }
 
-        $this->updateThreadDtos($threadDtos, $responseDtos);
+    private function waitForThreadWithTimeout(string $uuid, int $pid, int $timeout, int $startingTime): void
+    {
+        while (true) {
+            $res = pcntl_waitpid($pid, $status, WNOHANG);
+            if ($res == -1 || $res > 0) {
+                break;
+            }
 
-        return $responseDtos;
+            if ((time() - $startingTime) > $timeout) {
+                // timeout reached: try graceful termination, then force
+                @posix_kill($pid, SIGTERM);
+                usleep(200000); // 200ms grace
+                if (pcntl_waitpid($pid, $status, WNOHANG) == 0) {
+                    @posix_kill($pid, SIGKILL);
+                    pcntl_waitpid($pid, $status);
+                }
+
+                throw new RuntimeException("Thread {$uuid} timed out and terminated after {$timeout} seconds.");
+            }
+            usleep(100000); // 100ms poll interval
+        }
     }
 
     /**
