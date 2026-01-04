@@ -3,8 +3,10 @@
 namespace Tbessenreither\PhpMultithread\Dto;
 
 use InvalidArgumentException;
+use ReflectionClass;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 use Symfony\Component\Uid\UuidV7;
-use Tbessenreither\PhpMultithread\DataCollector\ThreadStatistics;
+use Tbessenreither\PhpMultithread\Service\RuntimeAutowireService;
 use Tbessenreither\PhpMultithread\Trait\SerializeFunctionsTrait;
 
 
@@ -29,6 +31,21 @@ class ThreadDto
         }
         if (!method_exists($this->class, $this->method)) {
             throw new InvalidArgumentException("The given method does not exist in the class. " . $this->class . "::" . $this->method . "()");
+        }
+        // check if the given class has the RuntimeAutowireService::AUTOWIRE_TAG tag
+        $reflection = new ReflectionClass($this->class);
+        $hasTag = false;
+        $attributes = $reflection->getAttributes();
+        foreach ($attributes as $attr) {
+            if ($attr->getName() === AsTaggedItem::class) {
+                if ($instance = $attr->newInstance()->index === RuntimeAutowireService::AUTOWIRE_TAG) {
+                    $hasTag = true;
+                    break;
+                }
+            }
+        }
+        if (!$hasTag) {
+            throw new InvalidArgumentException("The given class must be tagged with the AUTOWIRE_TAG tag to ensure proper runtime autowiring. " . $this->class . " >#[AsTaggedItem(RuntimeAutowireService::AUTOWIRE_TAG)]<");
         }
     }
 
