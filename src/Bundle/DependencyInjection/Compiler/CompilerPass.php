@@ -13,6 +13,7 @@ use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Reference;
 use Tbessenreither\PhpMultithread\Service\MultithreadService;
 use Tbessenreither\PhpMultithread\Service\MultithreadSignatureService;
+use Tbessenreither\PhpMultithread\Service\ParallelExecService;
 use Tbessenreither\PhpMultithread\Service\Runners\CommandRunner;
 use Tbessenreither\PhpMultithread\Service\Runners\PcntlRunner;
 use Tbessenreither\PhpMultithread\Service\RuntimeAutowireService;
@@ -32,6 +33,7 @@ class CompilerPass implements CompilerPassInterface
 		$this->processClass($container, classInstance: MultithreadService::class);
 		$this->processClass($container, classInstance: PcntlRunner::class);
 		$this->processClass($container, classInstance: CommandRunner::class);
+		$this->processClass($container, classInstance: ParallelExecService::class);
 		$this->processRuntimeAutowireService($container);
 		$this->processClass($container, classInstance: MultithreadSignatureService::class);
 	}
@@ -79,7 +81,9 @@ class CompilerPass implements CompilerPassInterface
 	private function processRuntimeAutowireService(ContainerBuilder $container): Definition
 	{
 		$definition = $this->processClass($container, classInstance: RuntimeAutowireService::class);
-		$services = [];
+		$services = [
+			ParallelExecService::class => new Reference(ParallelExecService::class),
+		];
 
 		foreach ($container->findTaggedServiceIds(RuntimeAutowireService::AUTOWIRE_TAG) as $id => $tags) {
 			$services[$id] = new Reference($id);
