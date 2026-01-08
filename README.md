@@ -3,8 +3,6 @@
 
 A Symfony bundle for running multiple PHP methods in parallel, leveraging process control (pcntl) for true multithreading. This allows you to execute service methods concurrently, collect their results, and monitor resource usage, all integrated with Symfony’s profiler.
 
-Tolle änderung
-
 ## Features
 
 - Run multiple service methods in parallel threads
